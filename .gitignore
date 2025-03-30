@@ -137,6 +137,7 @@ ENV/
 env.bak/
 venv.bak/
 
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -173,3 +174,8 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+#my ignore
+db-scripts/postgres/checkpointLocation/
+db-scripts/data/
+db-scripts/postgres/secrets.py
