@@ -38,7 +38,7 @@ def process_batch(df, epoch_id):
 def main():
     spark = config_spark()
     print("Hi, in main")
-    schema = StructType([
+    tracks_presentation_schema = StructType([
         StructField("track_id", StringType(), True),
         StructField("artist_name", StringType(), True),
         StructField("track_name", StringType(), True),
@@ -63,12 +63,11 @@ def main():
     (
         spark
         .readStream
-        .schema(schema)
-        .option("maxBytesPerTrigger", "5mb")
+        .schema(tracks_presentation_schema)
         .parquet("../data/ready_parquet_to_postgress")
         .writeStream
         .trigger(availableNow=True)
-        .option("checkpointLocation", "./checkpointLocation/load_to_postgres1/")
+        .option("checkpointLocation", "./checkpointLocation/load_to_postgres/")
         .foreachBatch(process_batch)
         .start()
         .awaitTermination()

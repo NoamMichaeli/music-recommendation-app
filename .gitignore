@@ -179,3 +179,5 @@ cython_debug/
 db-scripts/postgres/checkpointLocation/
 db-scripts/data/
 db-scripts/postgres/secrets.py
+db-scripts/pine/checkpointLocation/
+db-scripts/postgres/checkpointLocation
