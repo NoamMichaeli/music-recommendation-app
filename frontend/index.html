@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Spotify Song Recommender</title>
+
+    <!-- External CSS -->
+    <link rel="stylesheet" href="/static/index.css" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
+</head>
+<body>
+    <div class="container text-center">
+        <h1 class="page-header">Spotify Song Recommender 🎶</h1>
+
+        <button
+            class="btn btn-custom btn-lg"
+            onclick="displaySong()"
+            aria-label="Get a random song recommendation"
+        >
+            <i class="fa fa-music" aria-hidden="true"></i> Get Random Track
+        </button>
+
+        <!-- Loading Spinner -->
+        <div class="spinner" id="spinner">
+            <i class="fa fa-spinner fa-spin fa-2x"></i>
+            <p>Loading Track...</p>
+        </div>
+
+        <!-- Song Details -->
+        <div class="song-details" id="songDisplay">
+            <!-- התוכן יתמלא כאן -->
+        </div>
+    </div>
+
+    <!-- JS Script -->
+    <script src="/static/index.js"></script>
+</body>
+</html>

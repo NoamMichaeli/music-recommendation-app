@@ -1,3 +1,6 @@
 pyspark
 delta-spark
 pinecone
+fastapi
+uvicorn
+psycopg2
