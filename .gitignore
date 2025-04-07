@@ -181,3 +181,6 @@ db-scripts/data/
 db-scripts/postgres/secrets.py
 db-scripts/pine/checkpointLocation/
 db-scripts/postgres/checkpointLocation
+/db-scripts/postgres/commands.sql
+/backend/secrets.py
+/db-scripts/pine/secrets.py
