@@ -1,7 +1,9 @@
 from contextlib import contextmanager
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from .secrets import DATABASE_URL
+import os
+
+DATABASE_URL=os.environ.get("DATABASE_URL")
 
 @contextmanager
 def get_db():
