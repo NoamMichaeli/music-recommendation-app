@@ -6,4 +6,4 @@ uvicorn
 psycopg2
 passlib
 pydantic
-bcrypt
+bcrypt==4.0.1
