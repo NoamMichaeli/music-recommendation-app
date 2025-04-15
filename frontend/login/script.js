@@ -1,17 +1,26 @@
 CACHE_USER_ID_KEY = 'user_id';
 CACHE_USER_NAME_KEY = 'user_name';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
     const showLoginPassword = document.getElementById('showLoginPassword');
     const showRegisterPassword = document.getElementById('showRegisterPassword');
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
     const loginError = document.getElementById('loginError');
     const registerError = document.getElementById('registerError');
-
-     // Check if user is logged in
     const user_id = localStorage.getItem('user_id');
     const user_name = localStorage.getItem('user_name');
+
+     // Check if user is logged in when the user clicked 'previous/forward page'
+     window.addEventListener('popstate', function() {
+        user_id = localStorage.getItem('user_id');
+        user_name = localStorage.getItem('user_name');
+        if (user_id && user_name) {
+            verifyUser(user_id, user_name);
+        }
+     });
+
+    // Check if user is logged in when the DOM finished  to load
     if (user_id && user_name) {
         verifyUser(user_id, user_name);
     }

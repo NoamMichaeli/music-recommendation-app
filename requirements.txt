@@ -4,3 +4,6 @@ pinecone
 fastapi
 uvicorn
 psycopg2
+passlib
+pydantic
+bcrypt
