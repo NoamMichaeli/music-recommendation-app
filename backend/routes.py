@@ -1,13 +1,19 @@
+import random
+
 from fastapi import APIRouter, HTTPException
 from . import crud
-from .models import User
+from .models import User, Track, CSVUploadRequest, UserTrackRequest
 from .password_util import hash_password, verify_password
+from typing import List
+
 router = APIRouter()
+
 
 # endpoint related to the basic webapp
 @router.get("/track")
 def get_track():
     return crud.get_track()
+
 
 @router.post("/register")
 def register(user: User):
@@ -37,3 +43,93 @@ def verify_user(user_id: int, user_name: str):
     if not result or not result['is_user_exists']:
         raise HTTPException(status_code=404, detail="User not found")
     return {"is_admin": result['is_admin']}
+
+
+@router.get("/like")
+def get_likes(user_id: int, user_name: str):
+    if not crud.user_exists(user_id, user_name):
+        raise HTTPException(status_code=404, detail="User not found")
+    return crud.get_likes(user_id)
+
+
+@router.get("/dislike")
+def get_dislikes(user_id: int, user_name: str):
+    if not crud.user_exists(user_id, user_name):
+        raise HTTPException(status_code=404, detail="User not found")
+    return crud.get_dislikes(user_id)
+
+
+@router.get("/recommendation", response_model=List[Track])
+def get_recommendations(user_id: int, user_name: str, is_from_button: bool, is_user_ignored_recommendations: bool):
+    if not crud.user_exists(user_id, user_name):
+        raise HTTPException(status_code=404, detail="User not found")
+    tracks = crud.get_random_10_tracks()
+    # Add missing keys
+    types = ["user_history", "similar_users"]
+    for i, item in enumerate(tracks):
+        item["relevance_percentage"] = random.randint(80, 99)  # or any logic you want
+        item["recommendation_type"] = types[i % len(types)]  # alternate types
+
+    return tracks
+
+
+@router.post("/like/csv")
+def upload_csv(request: CSVUploadRequest):
+    if not crud.user_exists(request.user_id, request.user_name):
+        raise HTTPException(status_code=404, detail="User not found")
+
+    affected_rows = crud.upload_csv(request.user_id, request.track_ids)
+    if affected_rows == 0:
+        return {"status": "200", "message": "All liked tracks already exist", "affected_rows": affected_rows}
+    else:
+    #     update_user_mean_vector(request.user_id)
+        return {"status": "200", "message": "Likes were added successfully", "affected_rows": affected_rows}
+
+
+@router.post("/like")
+def add_like_route(request: UserTrackRequest):
+    if not crud.user_exists(request.user_id, request.user_name):
+        raise HTTPException(status_code=404, detail="User not found")
+    success, message, affected_rows = crud.add_like(request.user_id, request.track_id)
+    return {"status": "200", "message": message, "affected_rows": affected_rows}
+
+
+    # if success:
+    #     update_user_mean_vector(request.user_id)
+    #     if request.is_add_by_user:
+    #         stats_crud.user_added_track_report(request.user_id, request.track_id)
+    #     else:
+    #         stats_crud.user_liked_recommended_track_report(request.user_id, request.track_id,
+    #                                                        request.recommendation_type)
+    #     return {"status": "200", "message": message, "affected_rows": 1}
+    # else:
+    #     return {"status": "200", "message": message, "affected_rows": 0}
+
+
+@router.post("/dislike")
+def add_dislike(request: UserTrackRequest):
+    if not crud.user_exists(request.user_id, request.user_name):
+        raise HTTPException(status_code=404, detail="User not found")
+
+    crud.add_dislike(request.user_id, request.track_id)
+    # stats_crud.user_disliked_recommended_track_report(request.user_id, request.track_id, request.recommendation_type)
+    return {"status": "200"}
+
+
+@router.delete("/like")
+def remove_like(request: UserTrackRequest):
+    if not crud.user_exists(request.user_id, request.user_name):
+        raise HTTPException(status_code=404, detail="User not found")
+
+    crud.remove_like(request.user_id, request.track_id)
+    # update_user_mean_vector(request.user_id)
+    return {"status": "200"}
+
+
+@router.delete("/dislike")
+def remove_dislike(request: UserTrackRequest):
+    if not crud.user_exists(request.user_id, request.user_name):
+        raise HTTPException(status_code=404, detail="User not found")
+
+    crud.remove_dislike(request.user_id, request.track_id)
+    return {"status": "200"}
