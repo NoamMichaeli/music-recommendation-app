@@ -17,13 +17,7 @@ CREATE TABLE public.tracks (
     liveness         DOUBLE PRECISION,
     valence          DOUBLE PRECISION,
     tempo            DOUBLE PRECISION,
-    duration_ms      VARCHAR,
-    time_signature   VARCHAR,
-    year_2000_2004   INTEGER,
-    year_2005_2009   INTEGER,
-    year_2010_2014   INTEGER,
-    year_2015_2019   INTEGER,
-    year_2020_2024   INTEGER
+    duration_ms      VARCHAR
 );
 
 CREATE TABLE public.users (

@@ -130,10 +130,12 @@ function verifyUser(user_id, user_name) {
     .then(response => {
         if (response.status === 404) {
            handleUnauthorizedUser()
+           return { unauthorized: true };
         }
         return response.json();
     })
     .then(data => {
+    if (data.unauthorized) return;
         if(data.is_admin) {
             window.location.href = '/static/stats/index.html';
         } else {
