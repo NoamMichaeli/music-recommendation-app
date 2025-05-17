@@ -1,5 +1,5 @@
 from .database import get_db
-from typing import Dict
+from typing import Dict, Tuple
 
 
 # function related to the basic webapp
@@ -57,14 +57,17 @@ def user_exists(user_id: int, user_name: str) -> Dict[str, bool]:
         with conn.cursor() as cur:
             cur.execute("SELECT id, username, is_admin FROM users WHERE id = %s;", (user_id,))
             user = cur.fetchone()
-            return {"is_user_exists": user and user['username'] == user_name, "is_admin": user['is_admin']}
+            if user:
+                return {"is_user_exists": user and user['username'] == user_name, "is_admin": user['is_admin']}
+            else:
+                return {"is_user_exists": False, "is_admin": False}
 
 
 def get_likes(user_id: int):
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT t.track_id, t.track_name, t.artist_name, year
+                SELECT t.track_id, t.track_name, t.artist_name, year, update_timestamp
                 FROM likes l
                 JOIN tracks t ON l.track_id = t.track_id
                 WHERE l.user_id = %s
@@ -89,7 +92,7 @@ def get_dislikes(user_id: int):
             return tracks
 
 
-def add_like(user_id: int, track_id: str) -> tuple[bool, str, int]:
+def add_like(user_id: int, track_id: str) -> Tuple[bool, str, int]:
     with get_db() as conn:
         with conn.cursor() as cur:
             # Check if the track_id exists in the dislikes table for the user
