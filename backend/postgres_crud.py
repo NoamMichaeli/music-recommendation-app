@@ -157,3 +157,36 @@ def remove_dislike(user_id: int, track_id: str):
         with conn.cursor() as cur:
             cur.execute("""DELETE FROM dislikes WHERE user_id = %s AND track_id = %s;""", (user_id, track_id))
             conn.commit()
+
+
+def get_recommended_tracks_by_filtering_out_the_user_listening_history(top_tracks: list[tuple], user_id: int):
+    values_clause = ", ".join([f"('{track_id}', {relevance_percentage})" for track_id, relevance_percentage in top_tracks])
+    query = f"""
+        WITH
+        current_user_likes_dislikes AS (
+            SELECT likes.track_id
+            FROM likes
+            WHERE user_id = {user_id}
+            UNION
+            SELECT dislikes.track_id
+            FROM dislikes
+            WHERE user_id = {user_id}
+        ),
+        top_tracks AS (
+            SELECT track_id_col, ROUND(100 * relevance_percentage, 2) as relevance_percentage
+            FROM (
+                VALUES {values_clause}
+            ) AS derived_table(track_id_col, relevance_percentage)
+        )
+        SELECT tracks.track_id, track_name, artist_name, relevance_percentage, year, 'user_history' as recommendation_type
+        FROM top_tracks
+        JOIN tracks ON top_tracks.track_id_col = tracks.track_id
+        LEFT OUTER JOIN current_user_likes_dislikes ON top_tracks.track_id = current_user_likes_dislikes.track_id
+        WHERE current_user_likes_dislikes.track_id IS NULL;
+    """
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(query)
+            tracks = cur.fetchall()
+            return tracks
