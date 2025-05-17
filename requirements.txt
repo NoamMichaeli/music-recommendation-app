@@ -3,7 +3,7 @@ delta-spark
 pinecone
 fastapi
 uvicorn
-psycopg2-binary==2.9.9
+psycopg2
 passlib
 pydantic
 bcrypt==4.0.1
