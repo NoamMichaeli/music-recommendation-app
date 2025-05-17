@@ -77,7 +77,7 @@ def update_user_mean_vector(user_id: int):
         return
 
     user_liked_track_ids = [row["track_id"] for row in user_liked_tracks]
-    liked_tracks_vectors = query_pinecone_by_ids("tracks", user_liked_track_ids).get("vectors")
+    liked_tracks_vectors = query_pinecone_by_ids("tracks", user_liked_track_ids).vectors
 
     df_with_timestamps = build_vector_df_with_timestamps(liked_tracks_vectors, user_liked_tracks)
     df_with_timestamps = df_with_timestamps.drop("track_id", axis=1)
