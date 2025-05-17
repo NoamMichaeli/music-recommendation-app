@@ -1,6 +1,6 @@
 import pandas as pd
-from backend.pinecone_crud import query_pinecone_by_ids, upsert_pinecone, delete_ids_pinecone
-from backend.postgres_crud import get_likes
+from backend.pinecone_crud import query_pinecone_by_ids, upsert_pinecone, delete_ids_pinecone, query_pinecone_by_vector
+from backend.postgres_crud import get_likes, get_recommended_tracks_by_filtering_out_the_user_listening_history
 
 
 VECTOR_DIMENSIONS = ['acousticness', 'danceability', 'energy', 'instrumentalness', 'liveness', 'loudness', 'mode',
@@ -120,3 +120,24 @@ def update_user_mean_vector(user_id: int):
         return True
     return
 
+
+def get_recommendations_by_user_listening_history(user_id: int):
+    retrieve_user_results = query_pinecone_by_ids('users', [str(user_id)])
+    user_record = retrieve_user_results.get('vectors').get(str(user_id))
+
+    if not user_record:
+        return []  # user has no likes or dislikes, can't recommend
+    user_vector = user_record.get('values')
+
+    top_k_recommendations = 2 * user_record.get('metadata').get('num_tracks')
+    top_k_recommendations = 50 if top_k_recommendations < 50 else top_k_recommendations
+
+    # Query Pinecone 'tracks' index, using 'cosine' metric, to find the top most similar vectors
+    query_result = query_pinecone_by_vector('tracks', user_vector, top_k_recommendations)
+    top_ids_scores = [(match['id'], match['score']) for match in query_result['matches']]
+
+    # Get tracks information by 'track_id', and add the similarity 'score' pinecone calculated
+    if len(top_ids_scores) > 0:
+        result = get_recommended_tracks_by_filtering_out_the_user_listening_history(top_ids_scores, user_id)
+        return result
+    return []
