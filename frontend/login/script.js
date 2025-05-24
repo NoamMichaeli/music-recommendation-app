@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('user logged in:', data);
             localStorage.setItem('user_id', data.user_id);
             localStorage.setItem('user_name', data.user_name);
-            window.location.href = '/static/login/index.html';
+            window.location.href = '/static/recommendation/index.html';
 
         } catch (error) {
             loginError.textContent = "An unexpected error occurred.";
