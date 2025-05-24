@@ -1,5 +1,5 @@
 from .database import get_db
-from typing import Dict, Tuple
+from typing import List, Dict, Tuple
 
 
 # function related to the basic webapp
@@ -46,7 +46,7 @@ def authenticate_user(username: str):
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT id as user_id, username as user_name, is_admin, hashed_password FROM users WHERE username = %s;
+                SELECT id as user_id, username as user_name, hashed_password FROM users WHERE username = %s;
             """, (username,))
             user = cur.fetchone()
             return user
@@ -55,12 +55,12 @@ def authenticate_user(username: str):
 def user_exists(user_id: int, user_name: str) -> Dict[str, bool]:
     with get_db() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, username, is_admin FROM users WHERE id = %s;", (user_id,))
+            cur.execute("SELECT id, username FROM users WHERE id = %s;", (user_id,))
             user = cur.fetchone()
             if user:
-                return {"is_user_exists": user and user['username'] == user_name, "is_admin": user['is_admin']}
+                return {"is_user_exists": user and user['username'] == user_name}
             else:
-                return {"is_user_exists": False, "is_admin": False}
+                return {"is_user_exists": False}
 
 
 def get_likes(user_id: int):
@@ -130,7 +130,6 @@ def upload_csv(user_id: int, track_ids: list):
     for track_id in track_ids:
         if add_like(user_id, track_id)[0]:
             affected_rows += 1
-            # stats_crud.user_liked_recommended_track_report(user_id, track_id)
     return affected_rows
 
 
@@ -159,7 +158,7 @@ def remove_dislike(user_id: int, track_id: str):
             conn.commit()
 
 
-def get_recommended_tracks_by_filtering_out_the_user_listening_history(top_tracks: list[tuple], user_id: int):
+def get_recommended_tracks_by_filtering_out_the_user_listening_history(top_tracks: List[tuple], user_id: int):
     values_clause = ", ".join([f"('{track_id}', {relevance_percentage})" for track_id, relevance_percentage in top_tracks])
     query = f"""
         WITH
@@ -181,7 +180,7 @@ def get_recommended_tracks_by_filtering_out_the_user_listening_history(top_track
         SELECT tracks.track_id, track_name, artist_name, relevance_percentage, year, 'user_history' as recommendation_type
         FROM top_tracks
         JOIN tracks ON top_tracks.track_id_col = tracks.track_id
-        LEFT OUTER JOIN current_user_likes_dislikes ON top_tracks.track_id = current_user_likes_dislikes.track_id
+        LEFT OUTER JOIN current_user_likes_dislikes ON top_tracks.track_id_col = current_user_likes_dislikes.track_id
         WHERE current_user_likes_dislikes.track_id IS NULL;
     """
 
@@ -190,3 +189,53 @@ def get_recommended_tracks_by_filtering_out_the_user_listening_history(top_track
             cur.execute(query)
             tracks = cur.fetchall()
             return tracks
+
+
+def get_recommended_tracks_by_top_similar_users(top_users, user_id):
+    values_clause = ", ".join([f"(CAST('{user_id}' AS INT), {relevance_percentage})" for user_id, relevance_percentage in top_users])
+    query = f"""
+        WITH
+        current_user_likes_dislikes AS (
+            SELECT likes.track_id, likes.user_id
+            FROM likes
+            WHERE user_id = {user_id}
+            UNION
+            SELECT dislikes.track_id, dislikes.user_id
+            FROM dislikes
+            WHERE user_id = {user_id}
+        ),
+        top_users AS (
+            SELECT user_id_col, ROUND(100 * relevance_percentage, 2) as relevance_percentage
+            FROM (
+                VALUES {values_clause}
+            ) AS derived_table(user_id_col, relevance_percentage)
+        )
+        SELECT tracks.track_id, track_name, artist_name, top_users.relevance_percentage, year, 'similar_users' as recommendation_type
+        FROM top_users
+        JOIN likes ON top_users.user_id_col = likes.user_id
+        JOIN tracks ON likes.track_id = tracks.track_id
+        LEFT OUTER JOIN current_user_likes_dislikes ON tracks.track_id = current_user_likes_dislikes.track_id
+        WHERE current_user_likes_dislikes.track_id IS NULL;
+        """
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(query)
+            tracks = cur.fetchall()
+            return tracks
+
+
+def get_trending_tracks():
+    query = f"""
+        SELECT tracks.track_id, track_name, artist_name, year, '' as recommendation_type, 0 as relevance_percentage
+        FROM likes
+        JOIN tracks on likes.track_id = tracks.track_id
+        ORDER BY likes.update_timestamp DESC;
+        """
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(query)
+            tracks = cur.fetchall()
+            return tracks
+
+
