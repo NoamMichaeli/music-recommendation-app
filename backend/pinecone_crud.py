@@ -25,7 +25,7 @@ def delete_ids_pinecone(index_name: str, ids: List[str]):
         else:
             return False
 
-def query_pinecone_by_vector(index_name: str, column_averages: list[float], top_k: int):
+def query_pinecone_by_vector(index_name: str, column_averages: List[float], top_k: int):
     with get_pinecone_conn(index_name) as index:
         query_result = index.query(vector=column_averages, top_k=top_k)
         return query_result

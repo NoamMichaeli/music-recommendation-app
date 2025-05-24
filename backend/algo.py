@@ -1,7 +1,9 @@
+from typing import Dict
+
 import pandas as pd
 from backend.pinecone_crud import query_pinecone_by_ids, upsert_pinecone, delete_ids_pinecone, query_pinecone_by_vector
-from backend.postgres_crud import get_likes, get_recommended_tracks_by_filtering_out_the_user_listening_history
-
+from backend.postgres_crud import get_likes, get_recommended_tracks_by_filtering_out_the_user_listening_history, get_recommended_tracks_by_top_similar_users, get_trending_tracks
+import random
 
 VECTOR_DIMENSIONS = ['acousticness', 'danceability', 'energy', 'instrumentalness', 'liveness', 'loudness', 'mode',
                        'popularity', 'speechiness', 'tempo', 'valence', 'year_2000_2004', 'year_2005_2009',
@@ -123,7 +125,7 @@ def update_user_mean_vector(user_id: int):
 
 def get_recommendations_by_user_listening_history(user_id: int):
     retrieve_user_results = query_pinecone_by_ids('users', [str(user_id)])
-    user_record = retrieve_user_results.get('vectors').get(str(user_id))
+    user_record = retrieve_user_results.vectors.get(str(user_id))
 
     if not user_record:
         return []  # user has no likes or dislikes, can't recommend
@@ -141,3 +143,51 @@ def get_recommendations_by_user_listening_history(user_id: int):
         result = get_recommended_tracks_by_filtering_out_the_user_listening_history(top_ids_scores, user_id)
         return result
     return []
+
+
+def get_recommendations_by_similar_users(user_id: int):
+    retrieve_user_results = query_pinecone_by_ids('users', [str(user_id)])
+    user_record = retrieve_user_results.vectors.get(str(user_id))
+
+    if not user_record:
+        return []  # user has no likes or dislikes, can't recommend
+    user_vector = user_record.get('values')
+
+    # get similar user from pinecone, take top k user_id
+    # Query Pinecone 'users' index, using 'cosine' metric, to find the top most similar vectors
+    top_k_users = 20
+    query_user_results = query_pinecone_by_vector('users', user_vector, top_k=top_k_users)
+    top_ids_scores = [(match.get('id'), match.get('score')) for match in query_user_results.get('matches')]
+
+    if not len(top_ids_scores):
+        return []
+
+    result = get_recommended_tracks_by_top_similar_users(top_ids_scores, user_id)
+    return result
+
+def remove_duplicate_tracks_from_recommendation_list(combined_list):
+    frozensets = [frozenset(d.items()) for d in combined_list]
+    unique_frozensets = set(frozensets)
+    combined_dedup = [dict(fs) for fs in unique_frozensets]
+    return combined_dedup
+
+
+def get_combined_recommendation(user_id: int):
+    user_history = get_recommendations_by_user_listening_history(user_id)
+    similar_users = get_recommendations_by_similar_users(user_id)
+    combined = user_history + similar_users
+
+    # remove duplicates
+    combined_dedup = remove_duplicate_tracks_from_recommendation_list(combined)
+
+    if not combined_dedup:
+        trending = get_trending_tracks()
+        suggest_num = len(trending)
+        suggest_num = 50 if suggest_num > 50 else suggest_num
+        return random.sample(trending, suggest_num)
+
+    sample_size = int(max(len(user_history), len(similar_users))/4)
+    shuffled_list = random.sample(combined_dedup, sample_size)
+    shuffled_list = sorted(shuffled_list, key=lambda rec: rec["relevance_percentage"], reverse=True)
+
+    return shuffled_list

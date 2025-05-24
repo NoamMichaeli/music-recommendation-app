@@ -5,7 +5,7 @@ from . import postgres_crud
 from .models import User, Track, CSVUploadRequest, UserTrackRequest
 from .password_util import hash_password, verify_password
 from typing import List
-from .algo import update_user_mean_vector
+from .algo import update_user_mean_vector, get_combined_recommendation
 
 router = APIRouter()
 
@@ -34,8 +34,7 @@ def login(user: User):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
 
     return {'user_id': dbuser['user_id'],
-            'user_name': dbuser['user_name'],
-            'is_admin': dbuser['is_admin']}
+            'user_name': dbuser['user_name']}
 
 
 @router.get("/verify_user")
@@ -43,7 +42,7 @@ def verify_user(user_id: int, user_name: str):
     result = postgres_crud.user_exists(user_id, user_name)
     if not result.get("is_user_exists", False):
         raise HTTPException(status_code=404, detail="User not found")
-    return {"is_admin": result['is_admin']}
+    return {}
 
 
 @router.get("/like")
@@ -67,14 +66,10 @@ def get_recommendations(user_id: int, user_name: str, is_from_button: bool, is_u
     dict_result = postgres_crud.user_exists(user_id, user_name)
     if not dict_result.get("is_user_exists", False):
         raise HTTPException(status_code=404, detail="User not found")
-    tracks = postgres_crud.get_random_10_tracks()
-    # Add missing keys
-    types = ["user_history", "similar_users"]
-    for i, item in enumerate(tracks):
-        item["relevance_percentage"] = random.randint(80, 99)  # or any logic you want
-        item["recommendation_type"] = types[i % len(types)]  # alternate types
 
-    return tracks
+    result = get_combined_recommendation(user_id)
+    return result
+
 
 
 @router.post("/like/csv")
@@ -109,7 +104,6 @@ def add_dislike(request: UserTrackRequest):
         raise HTTPException(status_code=404, detail="User not found")
 
     postgres_crud.add_dislike(request.user_id, request.track_id)
-    # stats_postgres_crud.user_disliked_recommended_track_report(request.user_id, request.track_id, request.recommendation_type)
     return {"status": "200"}
 
 
