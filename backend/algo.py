@@ -129,13 +129,12 @@ def get_recommendations_by_user_listening_history(user_id: int):
 
     if not user_record:
         return []  # user has no likes or dislikes, can't recommend
-    user_vector = user_record.get('values')
 
     top_k_recommendations = 2 * user_record.get('metadata').get('num_tracks')
     top_k_recommendations = 50 if top_k_recommendations < 50 else top_k_recommendations
 
     # Query Pinecone 'tracks' index, using 'cosine' metric, to find the top most similar vectors
-    query_result = query_pinecone_by_vector('tracks', user_vector, top_k_recommendations)
+    query_result = query_pinecone_by_vector('tracks', user_record.values, top_k_recommendations)
     top_ids_scores = [(match['id'], match['score']) for match in query_result['matches']]
 
     # Get tracks information by 'track_id', and add the similarity 'score' pinecone calculated
@@ -151,12 +150,11 @@ def get_recommendations_by_similar_users(user_id: int):
 
     if not user_record:
         return []  # user has no likes or dislikes, can't recommend
-    user_vector = user_record.get('values')
 
     # get similar user from pinecone, take top k user_id
     # Query Pinecone 'users' index, using 'cosine' metric, to find the top most similar vectors
     top_k_users = 20
-    query_user_results = query_pinecone_by_vector('users', user_vector, top_k=top_k_users)
+    query_user_results = query_pinecone_by_vector('users', user_record.values, top_k=top_k_users)
     top_ids_scores = [(match.get('id'), match.get('score')) for match in query_user_results.get('matches')]
 
     if not len(top_ids_scores):
